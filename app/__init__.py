@@ -1,0 +1,1 @@
+"""Canary monitoring service package."""

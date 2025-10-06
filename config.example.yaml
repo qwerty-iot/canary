@@ -1,0 +1,20 @@
+pushover:
+  app_token: "your-pushover-app-token"
+  user_key: "target-user-or-group-key"
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+  title: "Canary Status"
+
+checks:
+  - name: Example Service
+    type: http
+    schedule: "*/1 * * * *"
+    options:
+      url: "https://example.com/health"
+      method: GET
+      expected_status: 200
+      expect_text: "OK"
+      include_body_on_error: true
+      response_excerpt_length: 300
