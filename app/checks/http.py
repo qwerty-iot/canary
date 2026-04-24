@@ -13,7 +13,7 @@ class HttpCheck(Check):
     async def run(self) -> CheckResult:
         url = self.options.get("url")
         if not url:
-            return CheckResult(ok=False, summary="Missing url option for HTTP check")
+            return CheckResult(ok=False, summary="Missing url option for HTTP check", severity="error")
 
         method = str(self.options.get("method", "GET")).upper()
         expected_status = int(self.options.get("expected_status", 200))
@@ -27,7 +27,7 @@ class HttpCheck(Check):
             try:
                 response = await client.request(method, url)
             except httpx.HTTPError as exc:
-                return CheckResult(ok=False, summary="HTTP request failed", details=str(exc))
+                return CheckResult(ok=False, summary="HTTP request failed", details=str(exc), severity="error")
 
         if response.status_code != expected_status:
             details = f"Expected {expected_status}, got {response.status_code}"
@@ -41,6 +41,7 @@ class HttpCheck(Check):
                 summary="Unexpected HTTP status",
                 details=details,
                 details_format=details_format,
+                severity="error",
             )
 
         body_text = response.text
@@ -56,6 +57,7 @@ class HttpCheck(Check):
                 summary="Expected text not found",
                 details=details,
                 details_format=details_format,
+                severity="error",
             )
         if expect_not_text and expect_not_text in body_text:
             details = f"Unexpected substring: {expect_not_text}"
@@ -69,9 +71,10 @@ class HttpCheck(Check):
                 summary="Forbidden text found",
                 details=details,
                 details_format=details_format,
+                severity="error",
             )
 
-        return CheckResult(ok=True, summary="HTTP check passed")
+        return CheckResult(ok=True, summary="HTTP check passed", severity="ok")
 
     @staticmethod
     def _coerce_bool(value: Any) -> bool:

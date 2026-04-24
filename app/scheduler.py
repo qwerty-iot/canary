@@ -23,6 +23,7 @@ class ScheduledCheck:
     instance: Check
     next_run: datetime = field(init=False)
     previous_ok: bool | None = field(init=False, default=None)
+    previous_severity: str | None = field(init=False, default=None)
 
     def __post_init__(self) -> None:
         now = datetime.now(timezone.utc)
@@ -83,26 +84,39 @@ class Scheduler:
             return await check.run()
         except Exception as exc:  # pylint: disable=broad-except
             LOGGER.exception("Unhandled exception while running check %s", check.name)
-            return CheckResult(ok=False, summary="Check crashed", details=str(exc))
+            return CheckResult(ok=False, summary="Check crashed", details=str(exc), severity="error")
 
     async def _handle_notification(self, scheduled: ScheduledCheck, result: CheckResult, summary: str) -> None:
-        previous = scheduled.previous_ok
+        previous_ok = scheduled.previous_ok
+        previous_severity = scheduled.previous_severity
         scheduled.previous_ok = result.ok
+        scheduled.previous_severity = result.severity
 
-        if result.ok:
-            if previous is False:
+        if result.severity == "ok":
+            if previous_severity in {"warning", "error"}:
                 await self._pushover.send(
                     message=f"✅ {scheduled.config.name} has recovered",
                     title="Canary Recovery",
                 )
-        else:
-            if previous is not False:
+            return
+
+        if result.severity == "warning":
+            if previous_severity != "warning":
                 detail = ""
                 if result.details:
-                    if result.details_format == "json" or "\n" in result.details:
-                        detail = f"\n{result.details}"
-                    else:
-                        detail = f" ({result.details})"
+                    detail = f"\n{result.details}" if (result.details_format == "json" or "\n" in result.details) else f" ({result.details})"
+                await self._pushover.send(
+                    message=f"⚠️ {scheduled.config.name} warning: {summary}{detail}",
+                    title="Canary Warning",
+                    priority=0,
+                )
+            return
+
+        if result.severity == "error":
+            if previous_severity != "error" or previous_ok is not False:
+                detail = ""
+                if result.details:
+                    detail = f"\n{result.details}" if (result.details_format == "json" or "\n" in result.details) else f" ({result.details})"
                 await self._pushover.send(
                     message=f"🚨 {scheduled.config.name} is failing: {summary}{detail}",
                     title="Canary Alert",

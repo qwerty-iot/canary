@@ -13,6 +13,7 @@ class CheckResult:
     summary: str
     details: Optional[str] = None
     details_format: str = "text"
+    severity: str = "ok"
 
 
 class Check(ABC):
@@ -34,6 +35,7 @@ class CheckStatus:
     summary: str
     details: Optional[str]
     details_format: str
+    severity: str
     last_run: Optional[datetime]
     last_changed: Optional[datetime]
 
@@ -45,6 +47,7 @@ class CheckStatus:
             summary="Pending",
             details=None,
             details_format="text",
+            severity="pending",
             last_run=None,
             last_changed=None,
         )
@@ -52,7 +55,7 @@ class CheckStatus:
     def with_result(self, result: CheckResult) -> "CheckStatus":
         now = datetime.now(timezone.utc)
         last_changed = self.last_changed
-        if self.ok != result.ok:
+        if self.ok != result.ok or self.severity != result.severity:
             last_changed = now
         return CheckStatus(
             name=self.name,
@@ -60,6 +63,7 @@ class CheckStatus:
             summary=result.summary,
             details=result.details,
             details_format=result.details_format,
+            severity=result.severity,
             last_run=now,
             last_changed=last_changed or now,
         )

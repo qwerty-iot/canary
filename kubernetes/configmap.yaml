@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: canary-config
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: canary
+    app.kubernetes.io/component: monitoring
+
+data:
+  config.yaml: |
+    pushover:
+      app_token: "REPLACE_WITH_PUSHOVER_APP_TOKEN"
+      user_key: "REPLACE_WITH_PUSHOVER_USER_KEY"
+
+    server:
+      host: "0.0.0.0"
+      port: 8000
+      title: "Canary Status"
+
+    checks:
+      - name: Example Service
+        type: http
+        schedule: "*/1 * * * *"
+        options:
+          url: "https://example.com/health"
+          method: GET
+          expected_status: 200
+          expect_text: "OK"
+          include_body_on_error: true
+          response_excerpt_length: 300
+      - name: Azure App Registrations
+        type: azure_app_registrations
+        schedule: "0 */6 * * *"
+        options:
+          tenant_id: "your-tenant-id"
+          client_id: "service-principal-client-id"
+          client_secret: "service-principal-client-secret"
+          include_prefixes:
+            - "prod-"
+          exclude_apps:
+            - "Canary"

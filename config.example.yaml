@@ -18,3 +18,14 @@ checks:
       expect_text: "OK"
       include_body_on_error: true
       response_excerpt_length: 300
+  - name: Azure App Registrations
+    type: azure_app_registrations
+    schedule: "0 */6 * * *"
+    options:
+      tenant_id: "your-tenant-id"
+      client_id: "service-principal-client-id"
+      client_secret: "service-principal-client-secret"
+      include_prefixes:
+        - "prod-"
+      exclude_apps:
+        - "Canary"

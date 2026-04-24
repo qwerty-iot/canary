@@ -27,6 +27,7 @@ def _serialize_status(status: CheckStatus) -> Dict[str, object]:
         "summary": status.summary,
         "details": status.details,
         "details_format": status.details_format,
+        "severity": status.severity,
         "last_run": fmt(status.last_run),
         "last_changed": fmt(status.last_changed),
     }
@@ -51,11 +52,25 @@ def create_web_app(
         statuses = await state.all_statuses()
         items = []
         for status in statuses.values():
+            severity = status.severity or ("ok" if status.ok else "pending")
+            status_text = {
+                "ok": "OK",
+                "warning": "Warning",
+                "error": "Failing",
+                "pending": "Pending",
+            }.get(severity, "Unknown")
+            status_class = {
+                "ok": "ok",
+                "warning": "warning",
+                "error": "failing",
+                "pending": "pending",
+            }.get(severity, "pending")
             items.append(
                 {
                     **_serialize_status(status),
-                    "status_text": "OK" if status.ok else ("Failing" if status.ok is False else "Pending"),
-                    "status_class": "ok" if status.ok else ("failing" if status.ok is False else "pending"),
+                    "status_text": status_text,
+                    "status_class": status_class,
+                    "severity": severity,
                     "details_is_json": status.details_format == "json",
                 }
             )
